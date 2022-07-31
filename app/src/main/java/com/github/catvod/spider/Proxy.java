@@ -1,70 +1,66 @@
 package com.github.catvod.spider;
 
 import android.util.Base64;
+
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderDebug;
-import com.github.catvod.spider.merge.FF;
-import com.github.catvod.spider.merge.r9;
+import com.github.catvod.live.TxtSubscribe;
+import com.github.catvod.utils.okhttp.OkHttpUtil;
+
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 
 public class Proxy extends Spider {
-    public static int d = -1;
 
-    public static Object[] proxy(Map<String, String> map) {
-        try {
-            String str = (String) map.get("do");
-            String str2 = "UTF-8";
-            if (str.equals("live")) {
-                if (((String) map.get("type")).equals("txt")) {
-                    String str3 = (String) map.get("ext");
-                    if (!str3.startsWith("http")) {
-                        str3 = new String(Base64.decode(str3, 10), str2);
-                    }
-                    return r9.E(str3);
-                }
-            } else if (str.equals("ck")) {
-                return new Object[]{Integer.valueOf(200), "text/plain; charset=utf-8", new ByteArrayInputStream("ok".getBytes(str2))};
-            } else if (str.equals("push")) {
-                return PushAgent.vod(map);
-            } else {
-                if (str.equals("kmys")) {
-                    return Kmys.vod(map);
-                }
-                if (str.equals("czspp")) {
-                    return Czsapp.loadsub((String) map.get("url"));
-                }
-            }
-        } catch (Throwable unused) {
-        }
-        return null;
-    }
+    public static int localPort = -1;
 
-    static void d() {
-        if (d <= 0) {
-            for (int i = 9978; i < 10000; i++) {
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append("http://127.0.0.1:");
-                stringBuilder.append(i);
-                stringBuilder.append("/proxy?do=ck");
-                if (FF.pW(stringBuilder.toString(), null).equals("ok")) {
-                    stringBuilder = new StringBuilder();
-                    stringBuilder.append("Found local server port ");
-                    stringBuilder.append(i);
-                    SpiderDebug.log(stringBuilder.toString());
-                    d = i;
-                    break;
-                }
+    static void adjustLocalPort() {
+        if (localPort > 0)
+            return;
+        int port = 9978;
+        while (port < 10000) {
+            String resp = OkHttpUtil.string("http://127.0.0.1:" + port + "/proxy?do=ck", null);
+            if (resp.equals("ok")) {
+                SpiderDebug.log("Found local server port " + port);
+                localPort = port;
+                break;
             }
+            port++;
         }
     }
 
     public static String localProxyUrl() {
-        d();
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("http://127.0.0.1:");
-        stringBuilder.append(d);
-        stringBuilder.append("/proxy");
-        return stringBuilder.toString();
+        adjustLocalPort();
+        return "http://127.0.0.1:" + Proxy.localPort + "/proxy";
     }
+
+    public static Object[] proxy(Map<String, String> params) {
+        try {
+            String what = params.get("do");
+            if (what.equals("nekk")) {
+                String pic = params.get("pic");
+                return Nekk.loadPic(pic);
+            } else if (what.equals("live")) {
+                String type = params.get("type");
+                if (type.equals("txt")) {
+                    String ext = params.get("ext");
+                    ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+                    return TxtSubscribe.load(ext);
+                }
+            } else if (what.equals("ck")) {
+                Object[] result = new Object[3];
+                result[0] = 200;
+                result[1] = "text/plain; charset=utf-8";
+                ByteArrayInputStream baos = new ByteArrayInputStream("ok".getBytes("UTF-8"));
+                result[2] = baos;
+                return result;
+            } else if (what.equals("kmys")) {
+                return Kmys.vod(params);
+            }
+        } catch (Throwable th) {
+
+        }
+        return null;
+    }
+
 }
