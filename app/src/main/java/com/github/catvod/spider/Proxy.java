@@ -37,14 +37,13 @@ public class Proxy extends Spider {
     public static Object[] proxy(Map<String, String> params) {
         try {
             String what = params.get("do");
-            if (what.equals("nekk")) {
-                String pic = params.get("pic");
-                return Nekk.loadPic(pic);
-            } else if (what.equals("live")) {
+            if (what.equals("live")) {
                 String type = params.get("type");
                 if (type.equals("txt")) {
                     String ext = params.get("ext");
-                    ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+                    if (!ext.startsWith("http")) {
+                        ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+                    }
                     return TxtSubscribe.load(ext);
                 }
             } else if (what.equals("ck")) {
@@ -54,9 +53,12 @@ public class Proxy extends Spider {
                 ByteArrayInputStream baos = new ByteArrayInputStream("ok".getBytes("UTF-8"));
                 result[2] = baos;
                 return result;
-            } else if (what.equals("kmys")) {
-                return Kmys.vod(params);
+            } else if (what.equals("push")) {
+                return PushAgent.vod(params);
+            } else if (what.equals("czspp")) {
+                return Czsapp.loadsub(params.get("url"));
             }
+
         } catch (Throwable th) {
 
         }
